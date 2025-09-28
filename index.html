@@ -274,28 +274,44 @@
     setTimeout(() => { toast.style.display = "none"; }, 3000);
   }
 
-  function initDashboard(studentId, student) {
-    if (student.timetable) {
-  const tbody = document.getElementById("timetableBody");
-  tbody.innerHTML = "";
-
-  // Loop through each day (Monday, Tuesday, ...)
-  Object.keys(student.timetable).forEach(day => {
-    const dayRow = `<tr><td colspan="3" style="background:#ffe6d9; font-weight:bold;">${day}</td></tr>`;
-    tbody.innerHTML += dayRow;
-
-    Object.keys(student.timetable[day]).forEach((p, i) => {
-      const row = student.timetable[day][p];
-      tbody.innerHTML += `
-        <tr>
-          <td>${i+1}</td>
-          <td>${periods[i].start} – ${periods[i].end}</td>
-          <td>${row.subject} (${row.status})</td>
-        </tr>`;
+  // ✅ Load today's attendance from Firestore
+  async function loadAttendance(studentId) {
+    const today = new Date().toISOString().split("T")[0];
+    const snapshot = await db.collection("attendance").doc(studentId).collection(today).get();
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const row = document.querySelector(`#attendanceTable tbody tr:nth-child(${data.period})`);
+      if (row) {
+        row.cells[2].textContent = data.type;
+        row.cells[3].textContent = data.status;
+        row.cells[3].className = data.status.toLowerCase();
+      }
     });
-  });
-}
+  }
 
+  function initDashboard(studentId, student) {
+    // ✅ Timetable loader
+    if (student.timetable) {
+      const tbody = document.getElementById("timetableBody");
+      tbody.innerHTML = "";
+      Object.keys(student.timetable).forEach(day => {
+        const dayRow = `<tr><td colspan="3" style="background:#ffe6d9; font-weight:bold;">${day}</td></tr>`;
+        tbody.innerHTML += dayRow;
+
+        Object.keys(student.timetable[day]).forEach((p, i) => {
+          const row = student.timetable[day][p];
+          tbody.innerHTML += `
+            <tr>
+              <td>${i+1}</td>
+              <td>${periods[i].start} – ${periods[i].end}</td>
+              <td>${row.subject} (${row.status})</td>
+            </tr>`;
+        });
+      });
+    }
+
+    // ✅ Load attendance on dashboard init
+    loadAttendance(studentId);
 
     let lastScanTime = 0;
     function onScanSuccess(decodedText) {
