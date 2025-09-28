@@ -265,12 +265,19 @@
     return "Absent";
   }
 
-  async function markAttendance(studentId, periodIndex, status, now, type) {
+  // ================= Attendance Mark ==================
+  async function markAttendance(studentId, periodIndex, status, now, type, qrText) {
     const today = new Date().toISOString().split("T")[0];
+    const time = now.toTimeString().split(" ")[0]; // HH:mm:ss
     const ref = db.collection("attendance").doc(studentId).collection(today).doc(`period${periodIndex+1}`);
     await ref.set({
-      date: today, period: periodIndex+1, type: type,
-      status: status, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      date: today,
+      time: time,
+      period: periodIndex+1,
+      type: type,
+      qrText: qrText,   // ✅ raw QR scanned text
+      status: status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     const row = document.querySelector(`#attendanceTable tbody tr:nth-child(${periodIndex+1})`);
@@ -311,9 +318,9 @@
 
       const text = decodedText.trim().toUpperCase().replace(/\s+/g,"");
       if (text === "NORMALCLASSROOM") {
-        markAttendance(studentId, periodIndex, getStatus(periodIndex, now), now, "Normal");
+        markAttendance(studentId, periodIndex, getStatus(periodIndex, now), now, "Normal", decodedText);
       } else if (text === "SKILLCLASSROOM") {
-        markAttendance(studentId, periodIndex, getStatus(periodIndex, now), now, "Skill");
+        markAttendance(studentId, periodIndex, getStatus(periodIndex, now), now, "Skill", decodedText);
       } else {
         document.getElementById("feedback").textContent = "❌ Invalid QR Code!";
       }
@@ -352,4 +359,3 @@
 </script>
 </body>
 </html>
-
