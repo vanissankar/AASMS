@@ -276,16 +276,26 @@
 
   function initDashboard(studentId, student) {
     if (student.timetable) {
-      const day = new Date().toLocaleString("en-US", { weekday: "long" });
-      const tbody = document.getElementById("timetableBody");
-      tbody.innerHTML = "";
-      if (student.timetable[day]) {
-        Object.keys(student.timetable[day]).forEach((p,i) => {
-          const row = student.timetable[day][p];
-          tbody.innerHTML += `<tr><td>${i+1}</td><td>${periods[i].start} – ${periods[i].end}</td><td>${row.subject}</td></tr>`;
-        });
-      }
-    }
+  const tbody = document.getElementById("timetableBody");
+  tbody.innerHTML = "";
+
+  // Loop through each day (Monday, Tuesday, ...)
+  Object.keys(student.timetable).forEach(day => {
+    const dayRow = `<tr><td colspan="3" style="background:#ffe6d9; font-weight:bold;">${day}</td></tr>`;
+    tbody.innerHTML += dayRow;
+
+    Object.keys(student.timetable[day]).forEach((p, i) => {
+      const row = student.timetable[day][p];
+      tbody.innerHTML += `
+        <tr>
+          <td>${i+1}</td>
+          <td>${periods[i].start} – ${periods[i].end}</td>
+          <td>${row.subject} (${row.status})</td>
+        </tr>`;
+    });
+  });
+}
+
 
     let lastScanTime = 0;
     function onScanSuccess(decodedText) {
