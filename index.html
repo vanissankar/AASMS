@@ -1,153 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>AASMS Student Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <title>AASMS Admin (with Analytics)</title>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- Firebase JS SDK (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- SheetJS (xlsx) for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#fffaf5; }
-    #loginSection { display:flex; justify-content:center; align-items:center; height:100vh; background:#fff4e6; }
-    .login-box { max-width:350px; width:100%; background:#fff; padding:24px; border-radius:10px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.15); border-top:6px solid #ff6600; }
-    .login-box h1 { text-align:center; margin-bottom:20px; color:#ff6600; }
-    form { display:flex; flex-direction:column; gap:12px; }
-    input, button { padding:10px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
-    button { background:#ff6600; color:white; border:none; cursor:pointer; }
-    button:hover { background:#e65c00; }
-    #status { margin-top:10px; text-align:center; font-size:14px; }
-
-    #dashboardSection { display:none; }
-    header { background:#ff6600; color:white; text-align:center; padding:0.8rem;
-      font-size:1.2rem; position:fixed; top:0; width:100%; z-index:10;
-      display:flex; justify-content:space-between; align-items:center; }
-    header button { background:#fff; color:#ff6600; border:none; border-radius:5px;
-      padding:5px 10px; cursor:pointer; font-weight:bold; }
-    header button:hover { background:#ffe6d9; }
-
-    main { padding:70px 10px 80px; }
-    .tab { display:none; }
-    .tab.active { display:block; }
-
-    .tab-nav { display:flex; justify-content:space-around; align-items:center;
-      background:#fff; border-top:1px solid #ccc; position:fixed; bottom:0; left:0; right:0;
-      height:60px; z-index:10; }
-    .tab-nav button { flex:1; padding:8px; border:none; background:none; font-size:0.9rem;
-      font-weight:bold; color:#555; display:flex; flex-direction:column; align-items:center; gap:3px; }
-    .tab-nav button.active { color:#ff6600; }
-
-    #reader { width:90%; max-width:400px; height:70%; max-height:400px; margin:15px auto;
-      border:2px solid #ff6600; border-radius:10px; }
-    #feedback { text-align:center; margin:10px; font-weight:bold; }
-
-    table { width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:10px; }
-    th, td { border:1px solid #ddd; padding:6px; text-align:center; }
-    th { background:#ff6600; color:white; font-size:0.9rem; }
-    td.present { background:#c8e6c9; }
-    td.late { background:#ffe0b2; }
-    td.absent { background:#ffcdd2; }
-    td.notmarked { background:#f5f5f5; }
-    .table-container { overflow-x:auto; }
-
-    /* ✅ Toast Notification */
-    #toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #4CAF50;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 6px;
-      display: none;
-      font-weight: bold;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      z-index: 9999;
+    /* ========= Styles (keeps your original styles intact and adds a few for analytics) ======== */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #333;
     }
+    /* ============== LOGIN STYLES ============== */
+    #loginPage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+    }
+    .login-container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      width: 320px;
+      text-align: center;
+    }
+    .login-container h1 { margin-bottom: 1.5rem; color: #333; }
+    .login-container input {
+      width: 100%; padding: 10px; margin: 0.6rem 0;
+      border: 1px solid #ccc; border-radius: 8px;
+    }
+    .login-container button {
+      width: 100%; padding: 10px; margin-top: 1rem;
+      border: none; border-radius: 8px;
+      background: #2575fc; color: white;
+      font-weight: bold; cursor: pointer; transition: 0.3s;
+    }
+    .login-container button:hover { background: #6a11cb; }
+    #error-message { margin-top: 1rem; color: red; font-size: 0.9rem; }
+
+    /* ============== DASHBOARD STYLES ============== */
+    #dashboardPage { display: none; }
+    header {
+      background: #ff6600; color: white;
+      padding: 1rem; display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    nav button {
+      background: white; border: none;
+      padding: 0.5rem 1rem; margin-left: 0.5rem;
+      border-radius: 5px; cursor: pointer;
+      font-weight: bold; color: #ff6600;
+    }
+    nav button.active { background: #333; color: white; }
+    main { padding: 1rem; }
+    .page { display: none; }
+    .page.active { display: block; }
+    table {
+      border-collapse: collapse;
+      width: 100%; margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    th { background: #ff6600; color: white; }
+    select { width: 100%; }
+    button {
+      background: #ff6600; color: white;
+      border: none; padding: 0.5rem 1rem;
+      margin-top: 1rem; border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover { background: #e65500; }
+    .student-form, .search-bar {
+      display: flex; flex-wrap: wrap;
+      gap: 0.5rem; margin-bottom: 1rem;
+    }
+    .student-form input, .search-bar input, .student-form select {
+      padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; flex: 1;
+    }
+    #studentTimetable td { cursor: pointer; transition: background 0.3s; }
+    #studentTimetable td.skill { background: #fff7f0; border: 2px solid #ff6600; }
+    #studentTimetable td.regular { background: #e8f8ec; border: 2px solid #28a745; }
+    #studentTimetable td.free { background: #f0f0f0; border: 2px solid #999; }
+    .legend { margin-top: 1rem; display: flex; gap: 1rem; font-size: 14px; }
+    .legend span { display: flex; align-items: center; gap: 4px; }
+    .legend-box { width: 16px; height: 16px; border: 2px solid #333; }
+    .legend-skill { background: #fff7f0; border-color: #ff6600; }
+    .legend-regular { background: #e8f8ec; border-color: #28a745; }
+    .legend-free { background: #f0f0f0; border-color: #999; }
+
+    /* ===== Analytics panel extra styling ===== */
+    .subtabs { display:flex; gap:8px; margin:10px 0; }
+    .subtabs button { padding:6px 10px; border-radius:6px; background:#f1a604; border:1px solid #ddd; cursor:pointer; }
+    .subtabs button.active { background:#ff6600; color:rgb(253, 251, 251); border:none; }
+    .analytics-grid { display:flex; gap:16px; flex-wrap:wrap; }
+    .card { background:#fff; padding:12px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.06); flex:1; min-width:280px; }
+    .chart-wrap { width:100%; max-width:700px; height:380px; }
+    .small { font-size:0.9rem; color:#555; }
+    .controls { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+    .controls label { font-weight:600; margin-right:6px; }
+    #exportBtn { background:#007acc; }
+    #exportBtn:hover { background:#0066b3; }
+    .report-options { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+    .muted { color:#666; font-size:0.9rem; }
+    /* Responsive */
+    @media (max-width:900px){ .analytics-grid { flex-direction:column; } .chart-wrap{height:300px;} }
   </style>
 </head>
 <body>
-
-<!-- ✅ Toast -->
-<div id="toast">✅ Scan Successful</div>
-
-<!-- ========== LOGIN SECTION ========== -->
-<section id="loginSection">
-  <div class="login-box">
-    <h1>AASMS Login</h1>
-    <form id="loginForm">
-      <label>Email (must end with @ksrce.ac.in)</label>
-      <input type="email" id="email" required />
-      <label>Password</label>
-      <input type="password" id="password" required />
-      <button type="submit">Login</button>
-    </form>
-    <p id="status"></p>
-  </div>
-</section>
-
-<!-- ========== DASHBOARD SECTION ========== -->
-<section id="dashboardSection">
-  <header>
-    📘 Student Dashboard
-    <button onclick="logout()">Logout</button>
-  </header>
-
-  <main>
-    <!-- Scanner Tab -->
-    <div id="scannerTab" class="tab active">
-      <h3 style="text-align:center;">Scan QR to Mark Attendance</h3>
-      <div id="reader"></div>
-      <div id="feedback">Waiting for scan...</div>
+  <!-- ============== LOGIN PAGE ============== -->
+  <div id="loginPage">
+    <div class="login-container">
+      <h1>AASMS Admin Login</h1>
+      <form id="loginForm">
+        <input type="email" id="email" placeholder="Admin Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+      </form>
+      <p id="error-message"></p>
     </div>
+  </div>
 
-    <!-- Attendance Tab -->
-    <div id="attendanceTab" class="tab">
-      <h3 style="text-align:center;">Today’s Attendance</h3>
-      <div class="table-container">
-        <table id="attendanceTable">
+  <!-- ============== DASHBOARD PAGE ============== -->
+  <div id="dashboardPage">
+    <header>
+      <h1>AASMS Admin Dashboard</h1>
+      <nav>
+        <button class="nav-btn active" data-target="classPage">Class Timetable</button>
+        <button class="nav-btn" data-target="studentPage">Student Timetable</button>
+        <button class="nav-btn" data-target="attendancePage">Attendance</button>
+        <button id="logoutBtn">Logout</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Class Timetable -->
+      <section id="classPage" class="page active">
+        <h2>Class Timetable</h2>
+        <label for="classSelect">Select Class:</label>
+        <select id="classSelect">
+          <option value="ClassA">Class A</option>
+          <option value="ClassB">Class B</option>
+          <option value="ClassC">Class C</option>
+          <option value="ClassD">Class D</option>
+        </select>
+        <table id="timetableTable">
           <thead>
-            <tr><th>Period</th><th>Time</th><th>Type</th><th>Status</th></tr>
+            <tr>
+              <th>Day</th>
+              <th>P1</th><th>P2</th><th>P3</th><th>P4</th>
+              <th>P5</th><th>P6</th><th>P7</th><th>P8</th>
+            </tr>
           </thead>
-          <tbody>
-            <tr><td>1</td><td>9:00 – 9:50</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>2</td><td>9:50 – 10:40</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>3</td><td>10:55 – 11:45</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>4</td><td>11:45 – 12:35</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>5</td><td>1:30 – 2:20</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>6</td><td>2:20 – 3:10</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>7</td><td>3:10 – 4:00</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-            <tr><td>8</td><td>4:00 – 4:50</td><td>-</td><td class="notmarked">Not Marked</td></tr>
-          </tbody>
+          <tbody></tbody>
         </table>
-      </div>
-    </div>
+        <button id="saveTimetableBtn">Save Class Timetable</button>
+      </section>
 
-    <!-- Timetable Tab -->
-    <div id="timetableTab" class="tab">
-      <h3 style="text-align:center;">Timetable</h3>
-      <div class="table-container">
-        <table>
-          <thead><tr><th>Period</th><th>Time</th><th>Subject</th></tr></thead>
-          <tbody id="timetableBody"></tbody>
+      <!-- Student Timetable -->
+      <section id="studentPage" class="page">
+        <h2>Student Timetable</h2>
+        <form id="studentForm" class="student-form">
+          <input type="text" id="studentName" placeholder="Student Name" required>
+          <input type="text" id="studentRoll" placeholder="Roll Number" required>
+          <input type="email" id="studentEmail" placeholder="Student Email (must end with @ksrce.ac.in)" required>
+          <select id="studentClass" required>
+            <option value="ClassA">Class A</option>
+            <option value="ClassB">Class B</option>
+            <option value="ClassC">Class C</option>
+            <option value="ClassD">Class D</option>
+          </select>
+          <input type="password" id="studentPassword" placeholder="Password" required>
+          <button type="submit">Save Student</button>
+        </form>
+        <div class="search-bar">
+          <input type="text" id="searchRoll" placeholder="Search by Roll Number">
+          <button id="searchBtn">Search</button>
+        </div>
+        <div class="legend">
+          <span><div class="legend-box legend-skill"></div> Skill</span>
+          <span><div class="legend-box legend-regular"></div> Regular</span>
+        </div>
+        <table id="studentTimetable">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>P1</th><th>P2</th><th>P3</th><th>P4</th>
+              <th>P5</th><th>P6</th><th>P7</th><th>P8</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
         </table>
-      </div>
-    </div>
-  </main>
+        <button id="saveStudentTimetableBtn">Save Student Timetable</button>
+      </section>
 
-  <div class="tab-nav">
-    <button onclick="openTab('scannerTab', this)" class="active">📷<span>Scanner</span></button>
-    <button onclick="openTab('attendanceTab', this)">📊<span>Attendance</span></button>
-    <button onclick="openTab('timetableTab', this)">📅<span>Timetable</span></button>
+      <!-- Attendance Panel (keeps your existing attendance table) but adds Analytics sub-panel -->
+      <section id="attendancePage" class="page">
+        <h2>Attendance</h2>
+
+        <!-- Keep existing search -->
+        <div style="margin-bottom:12px;">
+          <div class="search-bar" style="margin-bottom:8px;">
+            <input type="text" id="attendanceRoll" placeholder="Enter Roll Number">
+            <button id="attendanceSearchBtn">Check Attendance</button>
+          </div>
+
+          <table id="attendanceTable">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>P1</th><th>P2</th><th>P3</th><th>P4</th>
+                <th>P5</th><th>P6</th><th>P7</th><th>P8</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <hr style="margin:18px 0;">
+
+        <!-- Analytics Subtabs -->
+        <div>
+          <div class="subtabs" id="analyticsTabs">
+            <button class="active" data-sub="classStats">Class Stats</button>
+            <button data-sub="studentAnalysis">Student Analysis</button>
+            <button data-sub="reports">Reports</button>
+          </div>
+
+          <!-- Class Stats -->
+          <div id="classStats" class="card">
+            <div class="controls">
+              <label>Class:</label>
+              <select id="analyticsClassSelect"></select>
+
+              <label>Day:</label>
+              <input type="date" id="analyticsDate">
+
+              <label>Month:</label>
+              <input type="month" id="analyticsMonth">
+
+              <button id="loadClassStats">Load Stats</button>
+            </div>
+
+            <div class="analytics-grid">
+              <div class="card">
+                <h3 class="small">Day: <span id="classDayLabel">-</span></h3>
+                <div class="chart-wrap">
+                  <canvas id="dayChart"></canvas>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 class="small">Month-to-date: <span id="classMonthLabel">-</span></h3>
+                <div class="chart-wrap">
+                  <canvas id="monthChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Student Analysis -->
+          <div id="studentAnalysis" class="card" style="display:none;">
+            <div class="controls">
+              <input type="text" id="analysisRoll" placeholder="Enter Roll Number">
+              <input type="date" id="analysisDate" />
+              <input type="month" id="analysisMonth" />
+              <button id="loadStudentAnalysis">Load Student</button>
+            </div>
+
+            <div class="analytics-grid">
+              <div class="card">
+                <h3>Today's Attendance (<span id="studentTodayLabel">-</span>)</h3>
+                <table id="studentTodayTable">
+                  <thead><tr><th>Period</th><th>Type</th><th>Status</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <div class="card">
+                <h3>Month-to-date Summary</h3>
+                <div id="studentMonthSummary" class="small">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reports -->
+          <div id="reports" class="card" style="display:none;">
+            <div class="report-options">
+              <label>Month:</label>
+              <input type="month" id="reportMonth" />
+              <label>Up to date:</label>
+              <input type="date" id="reportUntil" />
+              <button id="exportBtn">Export Excel (All classes)</button>
+            </div>
+            <div class="muted">Export generates one Excel file with one sheet per class. Each sheet contains monthly stats for each student (name, roll, present/late/absent counts and %). Regular / Skill split included when available.</div>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-</section>
 
-<script>
-  // ================= Firebase ==================
+  <!-- ================= SCRIPT (JS) ================= -->
+  <script>
+  // ================= Firebase Init =================
   const firebaseConfig = {
     apiKey: "AIzaSyB8T7Y692ytTeHlfdAPQ9fOvZ3e2qEPTKs",
     authDomain: "aasms-6a83a.firebaseapp.com",
@@ -159,213 +331,580 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  const loginSection = document.getElementById("loginSection");
-  const dashboardSection = document.getElementById("dashboardSection");
-  const statusEl = document.getElementById("status");
+  // =========== Keep all your original globals and functions unchanged ============
+  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+  const subjects = ["OS","DMS","JP","COA","DSA","DSA LAB","OS LAB","JP LAB","DS LAB","FREE"];
+  let classSubjects = {};
+  const periodTimes = {
+    P1:"09:00-09:50", P2:"09:50-10:40", P3:"10:55-11:45",
+    P4:"11:45-12:35", P5:"01:30-02:20", P6:"02:20-03:10",
+    P7:"03:10-04:00", P8:"04:00-04:50"
+  };
 
-  // ================= LOGIN (Firestore only) ==================
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  // ---------- Login (unchanged) ----------
+  document.getElementById("loginForm").addEventListener("submit", async (e)=>{
     e.preventDefault();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
-
-    if (!email.endsWith("@ksrce.ac.in")) {
-      statusEl.textContent = "❌ Only @ksrce.ac.in emails are allowed";
-      statusEl.style.color = "red";
-      return;
-    }
-
+    const errorMessage = document.getElementById("error-message");
     try {
-      const snapshot = await db.collection("students")
-        .where("email", "==", email)
-        .limit(1)
-        .get();
-
-      if (snapshot.empty) {
-        statusEl.textContent = "❌ No student found with this email";
-        statusEl.style.color = "red";
-        return;
-      }
-
-      const doc = snapshot.docs[0];
-      const student = doc.data();
-
-      if (student.password === password) {
-        statusEl.textContent = "✅ Login successful! Redirecting...";
-        statusEl.style.color = "green";
-        localStorage.setItem("studentId", doc.id);
-
-        setTimeout(() => {
-          loginSection.style.display = "none";
-          dashboardSection.style.display = "block";
-          initDashboard(doc.id, student);
-        }, 1000);
-      } else {
-        statusEl.textContent = "❌ Incorrect password";
-        statusEl.style.color = "red";
-      }
+      await firebase.auth().signInWithEmailAndPassword(email, password);
     } catch (err) {
-      statusEl.textContent = "❌ Error: " + err.message;
-      statusEl.style.color = "red";
+      errorMessage.textContent = "⚠️ " + err.message;
     }
   });
 
-  function logout() {
-    localStorage.removeItem("studentId");
-    loginSection.style.display = "flex";
-    dashboardSection.style.display = "none";
-  }
-
-  function openTab(tabId, btn) {
-    document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-    document.querySelectorAll(".tab-nav button").forEach(b => b.classList.remove("active"));
-    document.getElementById(tabId).classList.add("active");
-    btn.classList.add("active");
-  }
-
-  const periods = [
-    { start: "09:00", end: "09:50" },
-    { start: "09:50", end: "10:40" },
-    { start: "10:55", end: "11:45" },
-    { start: "11:45", end: "12:35" },
-    { start: "13:30", end: "14:20" },
-    { start: "14:20", end: "15:10" },
-    { start: "15:10", end: "16:00" },
-    { start: "16:00", end: "16:50" }
-  ];
-  function getPeriodIndex(now) {
-    const current = now.getHours()*60 + now.getMinutes();
-    for (let i=0;i<periods.length;i++) {
-      const [sh, sm] = periods[i].start.split(":").map(Number);
-      const [eh, em] = periods[i].end.split(":").map(Number);
-      const startMin = sh*60+sm, endMin=eh*60+em;
-      if (current>=startMin && current<=endMin) return i;
+  firebase.auth().onAuthStateChanged(user=>{
+    if(user){
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("dashboardPage").style.display = "block";
+      renderClassTimetable("ClassA");
+      loadClassForStudent("ClassA");
+      populateAnalyticsClassDropdown();
+    } else {
+      document.getElementById("loginPage").style.display = "flex";
+      document.getElementById("dashboardPage").style.display = "none";
     }
-    return -1;
-  }
-  function getStatus(periodIndex, now) {
-    const [sh, sm] = periods[periodIndex].start.split(":").map(Number);
-    const startTime = new Date();
-    startTime.setHours(sh, sm, 0, 0);
-    const diffMinutes = (now - startTime)/60000;
-    if (diffMinutes <= 10) return "Present";
-    if (diffMinutes > 10 && diffMinutes <= 50) return "Late";
-    return "Absent";
-  }
+  });
 
-  async function markAttendance(studentId, periodIndex, status, now, type) {
-    const today = new Date().toISOString().split("T")[0];
-    const ref = db.collection("attendance").doc(studentId).collection(today).doc(`period${periodIndex+1}`);
-    await ref.set({
-      date: today, period: periodIndex+1, type: type,
-      status: status, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  document.getElementById("logoutBtn").addEventListener("click", ()=> firebase.auth().signOut());
+
+  // ---------- Navigation (unchanged) ----------
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+      document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+      document.getElementById(btn.dataset.target).classList.add("active");
+      btn.classList.add("active");
     });
+  });
 
-    const row = document.querySelector(`#attendanceTable tbody tr:nth-child(${periodIndex+1})`);
-    row.cells[2].textContent = type;
-    row.cells[3].textContent = status;
-    row.cells[3].className = status.toLowerCase();
-    document.getElementById("feedback").textContent = `✅ ${status} marked for ${type} in Period ${periodIndex+1}`;
-
-    // ✅ Show toast
-    const toast = document.getElementById("toast");
-    toast.textContent = `✅ ${status} - ${type} (Period ${periodIndex+1})`;
-    toast.style.display = "block";
-    setTimeout(() => { toast.style.display = "none"; }, 3000);
+  // ========== Class timetable (unchanged) ==========
+  function renderClassTimetable(classId){
+    const tbody = document.querySelector("#timetableTable tbody");
+    tbody.innerHTML = "";
+    days.forEach(day=>{
+      const tr = document.createElement("tr");
+      tr.appendChild(Object.assign(document.createElement("td"), { textContent: day }));
+      for(let p=1;p<=8;p++){
+        const td = document.createElement("td");
+        const sel = document.createElement("select");
+        subjects.forEach(s=>{
+          const opt = document.createElement("option");
+          opt.value = s; opt.textContent = s;
+          sel.appendChild(opt);
+        });
+        td.appendChild(sel);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+    db.collection("timetables").doc(classId).get().then(doc=>{
+      if(doc.exists){
+        const timetable = doc.data();
+        days.forEach((d,di)=>{
+          for(let p=1;p<=8;p++){
+            const periodData = timetable[d]?.[`P${p}`];
+            if(periodData){
+              tbody.rows[di].cells[p].querySelector("select").value = periodData.subject;
+            }
+          }
+        });
+        classSubjects[classId] = timetable;
+      } else classSubjects[classId]={};
+    });
   }
-
-  // ✅ Load today's attendance from Firestore
-  async function loadAttendance(studentId) {
-    const today = new Date().toISOString().split("T")[0];
-    const snapshot = await db.collection("attendance").doc(studentId).collection(today).get();
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const row = document.querySelector(`#attendanceTable tbody tr:nth-child(${data.period})`);
-      if (row) {
-        row.cells[2].textContent = data.type;
-        row.cells[3].textContent = data.status;
-        row.cells[3].className = data.status.toLowerCase();
+  document.getElementById("saveTimetableBtn").addEventListener("click", async ()=>{
+    const classId = document.getElementById("classSelect").value;
+    const tbody = document.querySelector("#timetableTable tbody");
+    let timetable = {};
+    days.forEach((d,di)=>{
+      timetable[d]={};
+      for(let p=1;p<=8;p++){
+        const subj = tbody.rows[di].cells[p].querySelector("select").value;
+        timetable[d][`P${p}`] = { subject: subj, time: periodTimes[`P${p}`] };
       }
     });
-  }
+    await db.collection("timetables").doc(classId).set(timetable);
+    classSubjects[classId]=timetable;
+    alert(`✅ Timetable saved for ${classId}`);
+  });
+  document.getElementById("classSelect").addEventListener("change", e=> renderClassTimetable(e.target.value));
 
-  function initDashboard(studentId, student) {
-    // ✅ Timetable loader
-    if (student.timetable) {
-      const tbody = document.getElementById("timetableBody");
-      tbody.innerHTML = "";
-      Object.keys(student.timetable).forEach(day => {
-        const dayRow = `<tr><td colspan="3" style="background:#ffe6d9; font-weight:bold;">${day}</td></tr>`;
-        tbody.innerHTML += dayRow;
-
-        Object.keys(student.timetable[day]).forEach((p, i) => {
-          const row = student.timetable[day][p];
-          tbody.innerHTML += `
-            <tr>
-              <td>${i+1}</td>
-              <td>${periods[i].start} – ${periods[i].end}</td>
-              <td>${row.subject} (${row.status})</td>
-            </tr>`;
+  // ========== Student timetable (unchanged) ==========
+  function renderStudentTimetable(classId, student=null){
+    const tbody = document.querySelector("#studentTimetable tbody");
+    tbody.innerHTML="";
+    days.forEach(day=>{
+      const tr = document.createElement("tr");
+      tr.appendChild(Object.assign(document.createElement("td"), { textContent: day }));
+      for(let p=1;p<=8;p++){
+        const td = document.createElement("td");
+        const subj = classSubjects[classId]?.[day]?.[`P${p}`]?.subject || "";
+        td.textContent = subj;
+        let type = student?.timetable?.[day]?.[`P${p}`]?.status || "skill";
+        td.dataset.type = type;
+        td.classList.add(type);
+        td.addEventListener("click", ()=>{
+          td.dataset.type = td.dataset.type === "skill" ? "regular" : "skill";
+          td.className = td.dataset.type;
         });
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+  }
+  async function loadClassForStudent(classId, student=null){
+    if(!classSubjects[classId]){
+      const doc = await db.collection("timetables").doc(classId).get();
+      classSubjects[classId] = doc.exists ? doc.data() : {};
+    }
+    renderStudentTimetable(classId, student);
+  }
+  document.getElementById("studentForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const name = document.getElementById("studentName").value.trim();
+    const roll = document.getElementById("studentRoll").value.trim();
+    const password = document.getElementById("studentPassword").value.trim();
+    const email = document.getElementById("studentEmail").value.trim();
+    const classId = document.getElementById("studentClass").value;
+    if(!name || !roll || !password || !email) return alert("⚠️ Please enter all details");
+    if(!/^[0-9]+$/.test(roll)) return alert("⚠️ Roll Number must be numeric!");
+    if(!email.endsWith("@ksrce.ac.in")) return alert("⚠️ Email must end with @ksrce.ac.in");
+    const existing = await db.collection("students").doc(roll).get();
+    if(existing.exists) return alert("⚠️ Student with this Roll Number already exists!");
+    let timetable = {};
+    const tbody = document.querySelector("#studentTimetable tbody");
+    days.forEach((d,di)=>{
+      timetable[d]={};
+      for(let p=1;p<=8;p++){
+        timetable[d][`P${p}`] = {
+          subject: tbody.rows[di].cells[p].textContent,
+          status: tbody.rows[di].cells[p].dataset.type
+        };
+      }
+    });
+    await db.collection("students").doc(roll).set({ name, roll, password, email, classId, timetable });
+    alert(`✅ Student ${name} saved successfully`);
+    document.getElementById("studentForm").reset();
+    loadClassForStudent(classId);
+  });
+
+  document.getElementById("searchBtn").addEventListener("click", async ()=>{
+    const roll = document.getElementById("searchRoll").value.trim();
+    if(!roll) return alert("⚠️ Enter a Roll Number");
+    const doc = await db.collection("students").doc(roll).get();
+    if(doc.exists){
+      const student = doc.data();
+      document.getElementById("studentName").value = student.name;
+      document.getElementById("studentRoll").value = student.roll;
+      document.getElementById("studentPassword").value = student.password;
+      document.getElementById("studentEmail").value = student.email;
+      document.getElementById("studentClass").value = student.classId;
+      loadClassForStudent(student.classId, student);
+    } else alert("⚠️ Student not found!");
+  });
+
+  document.getElementById("saveStudentTimetableBtn").addEventListener("click", async ()=>{
+    const roll = document.getElementById("studentRoll").value.trim();
+    if(!roll) return alert("⚠️ Enter Roll Number first!");
+    const tbody = document.querySelector("#studentTimetable tbody");
+    let timetable = {};
+    days.forEach((d,di)=>{
+      timetable[d]={};
+      for(let p=1;p<=8;p++){
+        timetable[d][`P${p}`] = {
+          subject: tbody.rows[di].cells[p].textContent,
+          status: tbody.rows[di].cells[p].dataset.type
+        };
+      }
+    });
+    await db.collection("students").doc(roll).update({ timetable });
+    alert("✅ Student timetable updated successfully");
+  });
+
+  // ========== Attendance simple search (keeps your previous) ==========
+  document.getElementById("attendanceSearchBtn").addEventListener("click", async ()=>{
+    const roll = document.getElementById("attendanceRoll").value.trim();
+    if(!roll) return alert("⚠️ Enter Roll Number");
+    // This old behavior expected attendance <docId=roll> -> map. We'll try both approaches.
+    const tbody = document.querySelector("#attendanceTable tbody");
+    tbody.innerHTML = "";
+
+    // Try: attendance doc map (legacy)
+    const doc = await db.collection("attendance").doc(roll).get();
+    if(doc.exists){
+      // If attendance doc is a map with day->P1 etc
+      const att = doc.data();
+      days.forEach(day=>{
+        const tr = document.createElement("tr");
+        tr.appendChild(Object.assign(document.createElement("td"), { textContent: day }));
+        for(let p=1;p<=8;p++){
+          const td = document.createElement("td");
+          td.textContent = att[day]?.[`P${p}`] || "-";
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
       });
+      return;
     }
 
-    // ✅ Load attendance on dashboard init
-    loadAttendance(studentId);
-
-    let lastScanTime = 0;
-    function onScanSuccess(decodedText) {
-      const now = new Date();
-      const currentTime = now.getTime();
-      if (currentTime - lastScanTime < 5000) return;
-      lastScanTime = currentTime;
-
-      const periodIndex = getPeriodIndex(now);
-      if (periodIndex === -1) {
-        document.getElementById("feedback").textContent = "❌ Not within class time!";
+    // Fallback: maybe attendance stored in per-student date subcollections
+    // We'll try to show today's attendance only (quick)
+    const today = new Date().toISOString().split("T")[0];
+    try {
+      const snapshot = await db.collection("attendance").doc(roll).collection(today).get();
+      if(!snapshot.empty){
+        const row = document.createElement("tr");
+        row.appendChild(Object.assign(document.createElement("td"), { textContent: today }));
+        for(let p=1;p<=8;p++){
+          const docP = snapshot.docs.find(d => d.id === `period${p}`);
+          const td = document.createElement("td");
+          td.textContent = docP ? docP.data().status : "-";
+          row.appendChild(td);
+        }
+        tbody.appendChild(row);
         return;
       }
+    } catch(e){}
+    alert("⚠️ No attendance found for this Roll Number (tried multiple formats)");
+  });
 
-      const text = decodedText.trim().toUpperCase().replace(/\s+/g,"");
-      if (text === "NORMALCLASSROOM") {
-        markAttendance(studentId, periodIndex, getStatus(periodIndex, now), now, "Normal");
-      } else if (text === "SKILLCLASSROOM") {
-        markAttendance(studentId, periodIndex, getStatus(periodIndex, now), now, "Skill");
-      } else {
-        document.getElementById("feedback").textContent = "❌ Invalid QR Code!";
-      }
+  // =================== NEW: Analytics ===================
+  // Helpers to list classes from students collection (distinct classId)
+  async function getAllClasses(){
+    const classes = new Set();
+    const snap = await db.collection("students").get();
+    snap.forEach(d => {
+      const c = d.data().classId;
+      if(c) classes.add(c);
+    });
+    return Array.from(classes).sort();
+  }
+
+  async function populateAnalyticsClassDropdown(){
+    const sel = document.getElementById("analyticsClassSelect");
+    sel.innerHTML = "";
+    // Also populate main classSelect with classes discovered (non-destructive)
+    const mainClassSel = document.getElementById("classSelect");
+    // Keep a map to avoid duplicates
+    const classes = await getAllClasses();
+    if(classes.length === 0){
+      // fallback to default options that already exist
+      ["ClassA","ClassB","ClassC","ClassD"].forEach(c=>{
+        const opt = document.createElement("option"); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+      });
+      return;
     }
-    function onScanFailure(err){}
-
-    const html5QrCode = new Html5Qrcode("reader");
-    Html5Qrcode.getCameras().then(cameras => {
-      if (cameras && cameras.length) {
-        const cameraId = cameras.length > 1 ? cameras[1].id : cameras[0].id;
-        html5QrCode.start(
-          cameraId, { fps:10, qrbox:{width:250,height:250} },
-          onScanSuccess, onScanFailure
-        ).catch(err => {
-          document.getElementById("feedback").textContent = "❌ Camera error: " + err;
-        });
-      } else {
-        document.getElementById("feedback").textContent = "❌ No cameras found.";
+    classes.forEach(c=>{
+      const opt = document.createElement("option"); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+      // ensure main class dropdown contains it
+      if(!Array.from(mainClassSel.options).some(o=>o.value===c)){
+        const opt2 = document.createElement("option"); opt2.value = c; opt2.textContent = c; mainClassSel.appendChild(opt2);
       }
-    }).catch(err => {
-      document.getElementById("feedback").textContent = "❌ Camera error: " + err;
     });
   }
 
-  window.onload = async () => {
-    const id = localStorage.getItem("studentId");
-    if (id) {
-      const doc = await db.collection("students").doc(id).get();
-      if (doc.exists) {
-        loginSection.style.display = "none";
-        dashboardSection.style.display = "block";
-        initDashboard(id, doc.data());
+  // Utility: returns array of date strings YYYY-MM-DD between start and end inclusive
+  function datesBetween(startDateStr, endDateStr){
+    const out = [];
+    const s = new Date(startDateStr + "T00:00:00");
+    const e = new Date(endDateStr + "T00:00:00");
+    for(let d = new Date(s); d <= e; d.setDate(d.getDate()+1)){
+      out.push(d.toISOString().split("T")[0]);
+    }
+    return out;
+  }
+
+  // Attempt to read attendance for a single student on a specific date:
+  //  - Primary: db.collection('attendance').doc(studentId).collection(date).get()
+  //  - Fallback: db.collection('attendance_records').where('studentId','==',studentId).where('date','==',date)
+  async function getAttendanceForStudentOnDate(studentId, dateStr){
+    // Returns object: { period1: {status,type}, period2:... } or null
+    try {
+      const colRef = db.collection("attendance").doc(studentId).collection(dateStr);
+      const snap = await colRef.get();
+      if(!snap.empty){
+        const res = {};
+        snap.forEach(d => {
+          const id = d.id; // likely period1, period2...
+          res[id] = d.data();
+        });
+        return res;
+      }
+    } catch(e){
+      // ignore
+    }
+
+    // fallback: try flat collection 'attendance_records'
+    try {
+      const flat = await db.collection("attendance_records")
+        .where("studentId","==",studentId)
+        .where("date","==",dateStr)
+        .get();
+      if(!flat.empty){
+        const res = {};
+        flat.forEach(doc => {
+          const data = doc.data(); // { period: 1..8, status, type }
+          res[`period${data.period}`] = data;
+        });
+        return res;
+      }
+    } catch(e){
+      // ignore
+    }
+
+    return null;
+  }
+
+  // Get class students (returns array of {roll, name, classId})
+  async function getStudentsByClass(classId){
+    const snap = await db.collection("students").where("classId","==",classId).get();
+    const arr = [];
+    snap.forEach(d => {
+      const data = d.data();
+      arr.push({ roll: data.roll || d.id, name: data.name || "", classId: data.classId || classId });
+    });
+    return arr;
+  }
+
+  // Aggregation helpers: count statuses across periods for a date object returned by getAttendanceForStudentOnDate.
+  function aggregateStatusFromDateObj(dateObj){
+    // dateObj keys like period1 -> { status: "Present"/"Late"/"Absent", type: "Normal"/"Skill" }
+    const counts = { Present:0, Late:0, Absent:0, total:0, byType: {} };
+    if(!dateObj) return counts;
+    Object.keys(dateObj).forEach(k=> {
+      const rec = dateObj[k];
+      if(!rec) return;
+      const st = rec.status || (rec.statusText) || "Absent";
+      counts.total++;
+      if(st === "Present") counts.Present++;
+      else if(st === "Late") counts.Late++;
+      else counts.Absent++;
+      const t = rec.type || rec.classType || "Unknown";
+      if(!counts.byType[t]) counts.byType[t] = { Present:0, Late:0, Absent:0, total:0 };
+      counts.byType[t].total++;
+      if(st === "Present") counts.byType[t].Present++;
+      else if(st === "Late") counts.byType[t].Late++;
+      else counts.byType[t].Absent++;
+    });
+    return counts;
+  }
+
+  // Calculate class stats for a single date: loop through students, sum
+  async function computeClassStatsForDate(classId, dateStr){
+    const students = await getStudentsByClass(classId);
+    const totals = { Present:0, Late:0, Absent:0, totalPeriods:0 };
+    for(const s of students){
+      const dateObj = await getAttendanceForStudentOnDate(s.roll, dateStr);
+      const aggregate = aggregateStatusFromDateObj(dateObj);
+      totals.Present += aggregate.Present;
+      totals.Late += aggregate.Late;
+      totals.Absent += aggregate.Absent;
+      totals.totalPeriods += aggregate.total;
+    }
+    return { totals, studentsCount: students.length };
+  }
+
+  // Compute class month-to-date stats: for each student, for each date in range, sum
+  async function computeClassStatsForMonthToDate(classId, monthStr, untilDateStr){
+    // monthStr e.g. "2025-09"
+    const students = await getStudentsByClass(classId);
+    const [year, month] = monthStr.split("-");
+    const startDate = `${year}-${month}-01`;
+    const dates = datesBetween(startDate, untilDateStr);
+    const totals = { Present:0, Late:0, Absent:0, totalPeriods:0 };
+    for(const s of students){
+      for(const d of dates){
+        const dateObj = await getAttendanceForStudentOnDate(s.roll, d);
+        const aggregate = aggregateStatusFromDateObj(dateObj);
+        totals.Present += aggregate.Present;
+        totals.Late += aggregate.Late;
+        totals.Absent += aggregate.Absent;
+        totals.totalPeriods += aggregate.total;
       }
     }
+    return { totals, studentsCount: students.length, daysCount: dates.length };
   }
-</script>
+
+  // ========== Chart helpers (Chart.js) ==========
+  let dayChartInstance = null, monthChartInstance = null;
+  function renderPieChart(canvasId, labels, data, title){
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    if(canvasId === "dayChart" && dayChartInstance) { dayChartInstance.destroy(); dayChartInstance = null; }
+    if(canvasId === "monthChart" && monthChartInstance) { monthChartInstance.destroy(); monthChartInstance = null; }
+    const config = {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          label: title,
+          data,
+        }]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ position: 'bottom' } }
+      }
+    };
+    if(canvasId === "dayChart") dayChartInstance = new Chart(ctx, config);
+    else monthChartInstance = new Chart(ctx, config);
+  }
+
+  // ========== Wire up Analytics UI ==========
+
+  // Analytics subtabs switching
+  document.querySelectorAll("#analyticsTabs button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll("#analyticsTabs button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("classStats").style.display = (btn.dataset.sub==="classStats") ? "block" : "none";
+      document.getElementById("studentAnalysis").style.display = (btn.dataset.sub==="studentAnalysis") ? "block" : "none";
+      document.getElementById("reports").style.display = (btn.dataset.sub==="reports") ? "block" : "none";
+    });
+  });
+
+  // Load class stats (on click)
+  document.getElementById("loadClassStats").addEventListener("click", async ()=>{
+    const classId = document.getElementById("analyticsClassSelect").value;
+    const dayInput = document.getElementById("analyticsDate").value;
+    const monthInput = document.getElementById("analyticsMonth").value;
+    if(!classId) return alert("Select a class");
+    // Day chart
+    const day = dayInput || new Date().toISOString().split("T")[0];
+    document.getElementById("classDayLabel").textContent = day;
+    const dayStats = await computeClassStatsForDate(classId, day);
+    const dayPresent = dayStats.totals.Present || 0;
+    const dayLate = dayStats.totals.Late || 0;
+    const dayAbsent = dayStats.totals.Absent || 0;
+    renderPieChart("dayChart", ["Present","Late","Absent"], [dayPresent, dayLate, dayAbsent], `Day ${day}`);
+
+    // Month-to-date chart
+    const month = monthInput || (new Date().toISOString().slice(0,7));
+    const untilDate = (new Date()).toISOString().split("T")[0]; // by default up to today
+    document.getElementById("classMonthLabel").textContent = `${month} → up to ${untilDate}`;
+    const mStats = await computeClassStatsForMonthToDate(classId, month, untilDate);
+    renderPieChart("monthChart", ["Present","Late","Absent"], [mStats.totals.Present, mStats.totals.Late, mStats.totals.Absent], `Month-to-date ${month}`);
+  });
+
+  // ========== Student Analysis ==========
+  document.getElementById("loadStudentAnalysis").addEventListener("click", async ()=>{
+    const roll = document.getElementById("analysisRoll").value.trim();
+    if(!roll) return alert("Enter a roll number");
+    const date = document.getElementById("analysisDate").value || new Date().toISOString().split("T")[0];
+    const month = document.getElementById("analysisMonth").value || (new Date().toISOString().slice(0,7));
+    document.getElementById("studentTodayLabel").textContent = date;
+
+    // Today's per-period
+    const dateObj = await getAttendanceForStudentOnDate(roll, date);
+    const tbody = document.querySelector("#studentTodayTable tbody");
+    tbody.innerHTML = "";
+    for(let p=1;p<=8;p++){
+      const rec = dateObj ? (dateObj[`period${p}`] || null) : null;
+      const tr = document.createElement("tr");
+      tr.appendChild(Object.assign(document.createElement("td"), { textContent: `P${p}` }));
+      tr.appendChild(Object.assign(document.createElement("td"), { textContent: rec ? (rec.type || "-") : "-" }));
+      tr.appendChild(Object.assign(document.createElement("td"), { textContent: rec ? (rec.status || "-") : "-" }));
+      tbody.appendChild(tr);
+    }
+
+    // Month-to-date summary
+    const [y,m] = month.split("-");
+    const startDate = `${y}-${m}-01`;
+    const until = new Date().toISOString().split("T")[0]; // default up to today
+    const dates = datesBetween(startDate, until);
+    const accum = { Present:0, Late:0, Absent:0, total:0, byType: {} };
+    for(const d of dates){
+      const dobj = await getAttendanceForStudentOnDate(roll, d);
+      const agg = aggregateStatusFromDateObj(dobj);
+      accum.Present += agg.Present; accum.Late += agg.Late; accum.Absent += agg.Absent; accum.total += agg.total;
+      // byType aggregate:
+      for(const t in agg.byType){
+        if(!accum.byType[t]) accum.byType[t] = { Present:0, Late:0, Absent:0, total:0 };
+        accum.byType[t].Present += agg.byType[t].Present;
+        accum.byType[t].Late += agg.byType[t].Late;
+        accum.byType[t].Absent += agg.byType[t].Absent;
+        accum.byType[t].total += agg.byType[t].total;
+      }
+    }
+    // render summary
+    const percent = accum.total ? ((accum.Present + accum.Late)/accum.total*100).toFixed(2) : "0.00";
+    let html = `<strong>From ${startDate} to ${until}</strong><br>`;
+    html += `Periods checked: ${accum.total}<br>`;
+    html += `Present: ${accum.Present}, Late: ${accum.Late}, Absent: ${accum.Absent} <br>`;
+    html += `Overall attendance % (Present+Late): ${percent}% <br><br>`;
+    html += `<strong>Split by type</strong><br>`;
+    for(const t in accum.byType){
+      const b = accum.byType[t];
+      const perc = b.total ? ((b.Present + b.Late)/b.total*100).toFixed(2) : "0.00";
+      html += `${t}: total ${b.total}, Present ${b.Present}, Late ${b.Late}, Absent ${b.Absent}, % ${(perc)}% <br>`;
+    }
+    document.getElementById("studentMonthSummary").innerHTML = html;
+  });
+
+  // ========== Reports (Excel Export) ==========
+  // Build one workbook (SheetJS) with one sheet per class; sheet rows: [Name, Roll, PresentCount, LateCount, AbsentCount, TotalPeriods, %]
+  document.getElementById("exportBtn").addEventListener("click", async ()=>{
+    const monthVal = document.getElementById("reportMonth").value;
+    const untilVal = document.getElementById("reportUntil").value;
+    if(!monthVal) return alert("Select month to export");
+    const untilDate = untilVal || (new Date().toISOString().split("T")[0]);
+    const classes = await getAllClasses();
+    if(classes.length === 0) return alert("No classes found to export");
+
+    // Prepare workbook
+    const wb = XLSX.utils.book_new();
+
+    // For each class, compute per-student monthly stats up to untilDate
+    for(const classId of classes){
+      const students = await getStudentsByClass(classId);
+      // header
+      const sheetRows = [];
+      sheetRows.push(["Name","Roll","Present","Late","Absent","TotalPeriods","Attendance % (P+L)","Present (regular)","Late (regular)","Absent (regular)","Present (skill)","Late (skill)","Absent (skill)"]);
+      // for each student compute stats
+      for(const s of students){
+        const [year, month] = monthVal.split("-");
+        const startDate = `${year}-${month}-01`;
+        const dates = datesBetween(startDate, untilDate);
+        let totalP=0, totalL=0, totalA=0, totalT=0;
+        let regP=0, regL=0, regA=0;
+        let skP=0, skL=0, skA=0;
+        for(const d of dates){
+          const dobj = await getAttendanceForStudentOnDate(s.roll, d);
+          const agg = aggregateStatusFromDateObj(dobj);
+          totalP += agg.Present; totalL += agg.Late; totalA += agg.Absent; totalT += agg.total;
+          // byType
+          for(const t in agg.byType){
+            const b = agg.byType[t];
+            if(t.toLowerCase().includes("skill")) { skP += b.Present; skL += b.Late; skA += b.Absent; }
+            else { regP += b.Present; regL += b.Late; regA += b.Absent; }
+          }
+        }
+        const overallPercent = totalT ? ((totalP + totalL)/totalT*100).toFixed(2) : "0.00";
+        sheetRows.push([s.name || "", s.roll || "", totalP, totalL, totalA, totalT, overallPercent, regP, regL, regA, skP, skL, skA]);
+      }
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      XLSX.utils.book_append_sheet(wb, ws, classId.substring(0,31) || classId); // sheet name max 31 chars
+    }
+
+    // Write workbook and initiate download
+    const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    const blob = new Blob([wbout], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `AASMS_Attendance_${document.getElementById("reportMonth").value || "report"}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // On load: populate basic dropdowns
+  // called after login in onAuthStateChanged, but also call here in case user is already logged in
+  (async ()=>{
+    try { await populateAnalyticsClassDropdown(); } catch(e){}
+  })();
+
+  // The rest of your usage and utilities remain intact.
+  </script>
 </body>
 </html>
