@@ -541,7 +541,7 @@
         tr.appendChild(Object.assign(document.createElement("td"), { textContent: day }));
         for(let p=1;p<=8;p++){
           const td = document.createElement("td");
-          td.textContent = att[day]?.[`P${p}`] || "-";
+          td.textContent = att[day]?.[`P${p}`] || "Absent";
           tr.appendChild(td);
         }
         tbody.appendChild(tr);
@@ -669,27 +669,45 @@
   }
 
   // Aggregation helpers: count statuses across periods for a date object returned by getAttendanceForStudentOnDate.
-  function aggregateStatusFromDateObj(dateObj){
-    // dateObj keys like period1 -> { status: "Present"/"Late"/"Absent", type: "Normal"/"Skill" }
-    const counts = { Present:0, Late:0, Absent:0, total:0, byType: {} };
-    if(!dateObj) return counts;
-    Object.keys(dateObj).forEach(k=> {
-      const rec = dateObj[k];
-      if(!rec) return;
-      const st = rec.status || (rec.statusText) || "Absent";
-      counts.total++;
-      if(st === "Present") counts.Present++;
-      else if(st === "Late") counts.Late++;
-      else counts.Absent++;
-      const t = rec.type || rec.classType || "Unknown";
-      if(!counts.byType[t]) counts.byType[t] = { Present:0, Late:0, Absent:0, total:0 };
-      counts.byType[t].total++;
-      if(st === "Present") counts.byType[t].Present++;
-      else if(st === "Late") counts.byType[t].Late++;
-      else counts.byType[t].Absent++;
-    });
+ function aggregateStatusFromDateObj(dateObj){
+  // dateObj keys like period1 -> { status: "Present"/"Late"/"Absent", type: "Normal"/"Skill" }
+  const counts = { Present:0, Late:0, Absent:0, total:0, byType: {} };
+  if(!dateObj) {
+    // ✅ If nothing at all for the day, mark all 8 as Absent
+    counts.Absent = 8;
+    counts.total = 8;
     return counts;
   }
+
+  // First process whatever exists in Firestore
+  Object.keys(dateObj).forEach(k => {
+    const rec = dateObj[k];
+    if(!rec) return;
+    const st = rec.status || rec.statusText || "Absent";
+    counts.total++;
+    if(st === "Present") counts.Present++;
+    else if(st === "Late") counts.Late++;
+    else counts.Absent++;
+
+    const t = rec.type || rec.classType || "Unknown";
+    if(!counts.byType[t]) counts.byType[t] = { Present:0, Late:0, Absent:0, total:0 };
+    counts.byType[t].total++;
+    if(st === "Present") counts.byType[t].Present++;
+    else if(st === "Late") counts.byType[t].Late++;
+    else counts.byType[t].Absent++;
+  });
+
+  // ✅ Fill in the missing periods as Absent
+  for (let i = 1; i <= 8; i++) {
+    if (!dateObj[`period${i}`]) {
+      counts.Absent++;
+      counts.total++;
+    }
+  }
+
+  return counts;
+}
+
 
   // Calculate class stats for a single date: loop through students, sum
   async function computeClassStatsForDate(classId, dateStr){
